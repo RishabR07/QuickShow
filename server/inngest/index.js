@@ -4,47 +4,59 @@ import User from "../model/User.js";
 // Create a client to send and receive events
 export const inngest = new Inngest({ id: "movie-ticket-booking" });
 
-//inngest functions to save user data to MongoDB
-
+/**
+ * Inngest function: Create user in MongoDB when created in Clerk
+ */
 const syncUserCreation = inngest.createFunction(
-    {id: 'sync-user-from-clerk'},
-    {event: 'clerk/user.created'},
-    async ({event}) => {
-        const{id,first_name, email_addresses, image_url} = event.data
-        const userData = {
-            _id: id,
-            email: email_addresses[0].email_address,
-            name: first_name + ' ' + last_name,
-            image: image_url
-        }
-    await User.create (userData);
-    }
-)
-//inngest fuinctino to delete user data from MongoDB when user is deleted from Clerk
+  { id: "sync-user-from-clerk" },
+  { event: "clerk/user.created" },
+  async ({ event }) => {
+    const { id, first_name, last_name, email_addresses, image_url } = event.data;
+
+    const userData = {
+      _id: id,
+      email: email_addresses?.[0]?.email_address || "",
+      name: `${first_name ?? ""} ${last_name ?? ""}`.trim(),
+      image: image_url,
+    };
+
+    await User.create(userData);
+  }
+);
+
+/**
+ * Inngest function: Delete user in MongoDB when deleted in Clerk
+ */
 const syncUserDeletion = inngest.createFunction(
-    {id: 'dlete-user-with-clerk'},
-    {event: 'clerk/user.deleted'},
-    async ({event}) => {
-        const{id} = event.data
-        await User.findByIdAndDelete(id);
-    }
- )
+  { id: "delete-user-with-clerk" },
+  { event: "clerk/user.deleted" },
+  async ({ event }) => {
+    const { id } = event.data;
+    await User.findByIdAndDelete(id);
+  }
+);
 
+/**
+ * Inngest function: Update user in MongoDB when updated in Clerk
+ */
+const syncUserUpdation = inngest.createFunction(
+  { id: "update-user-with-clerk" },
+  { event: "clerk/user.updated" },
+  async ({ event }) => {
+    const { id, first_name, last_name, email_addresses, image_url } = event.data;
 
-//inngest functions to update user data in MongoDB when user is updated in Clerk
- const syncUserUpdation = inngest.createFunction(
-    {id: 'update-user-with-clerk'},
-    {event: 'clerk/user.updated'},
-    async ({event}) => {
-        const{id,first_name, email_addresses, image_url} = event.data
-        const userData = {
-            _id: id,
-            email: email_addresses[0].email_address,
-            name: first_name + ' ' + last_name,
-            image: image_url
-        }
-    await User.findByIdAndUpdate(id, userData);
-    }
- )
-export const functions = [syncUserCreation, syncUserDeletion, syncUserUpdation];
+    const userData = {
+      email: email_addresses?.[0]?.email_address || "",
+      name: `${first_name ?? ""} ${last_name ?? ""}`.trim(),
+      image: image_url,
+    };
 
+    await User.findByIdAndUpdate(id, userData, { new: true });
+  }
+);
+
+export const functions = [
+  syncUserCreation,
+  syncUserDeletion,
+  syncUserUpdation,
+];

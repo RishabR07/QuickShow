@@ -28,13 +28,14 @@ const syncUserCreation = inngest.createFunction(
  * Inngest function: Delete user in MongoDB when deleted in Clerk
  */
 const syncUserDeletion = inngest.createFunction(
-  { id: "delete-user-with-clerk" },
+  { id: "dlete-user-with-clerk" },  // restore original ID
   { event: "clerk/user.deleted" },
   async ({ event }) => {
     const { id } = event.data;
     await User.findByIdAndDelete(id);
   }
 );
+
 
 /**
  * Inngest function: Update user in MongoDB when updated in Clerk
